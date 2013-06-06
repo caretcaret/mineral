@@ -4,10 +4,10 @@
 require './gradient_descent'
 require 'matrix'
 
-class LinearRegression
+class LogisticRegression
   attr_accessor :xs, :ys, :norm_weight, :parameters
 
-  def initialize(xs, ys, norm_weight=0, parameters=nil)
+  def initialize(xs, ys, norm_weight, parameters=nil)
     raise "No examples given" unless xs.size > 1 or ys.size > 1
     raise "Length mismatch for xs, ys" unless xs.size == ys.size
     @dimension = xs[0].size + 1
@@ -31,8 +31,8 @@ class LinearRegression
     dimension = #{@dimension}" unless @parameters.size == @dimension
   end
 
-  def hypothesis(parameters, x) # assuming x[0] = 1
-    x.inner_product(parameters)
+  def hypothesis(parameters, x)
+    1 / (1 + Math.exp(-x.inner_product(parameters)))
   end
 
   def predict(features)
@@ -42,13 +42,15 @@ class LinearRegression
   def cost(parameters)
     error = 0
     (0...@xs.size).each do |i|
-      error += (hypothesis(parameters, @xs[i]) - @ys[i])**2
+      h = hypothesis(parameters, @xs[i])
+      error += @ys[i] * Math.log(h)
+      error += (1 - @ys[i]) * Math.log(1 - h)
     end
     norm_penalty = 0
     (1...@dimension).each do |j|
       norm_penalty += parameters[j]**2
     end
-    1 / (2 * @xs.size) * (error + @norm_weight * norm_penalty)
+    1 / @xs.size * (-error + norm_weight * norm_penalty / 2)
   end
 
   def cost_gradient(parameters)
@@ -72,20 +74,22 @@ class LinearRegression
     @parameters = gd.x
     self
   end
+
 end
 
 if __FILE__ == $0
-  puts "* Testing linear regression..."
-  puts "1 Testing simple data set [(1, 0), (2, 1), (3, 2)]"
-  puts "1 with rate=0.03, normalization weight=0"
+  puts "* Testing logistic regression..."
+  puts "1 Testing simple data set [(-10, 0), (-5, 0), (-1, 0), (1, 0), (5, 1), (10, 1)]"
+  puts "1 with rate=0.05, normalization weight=0.5"
   monitor = lambda { |gd|
     if gd.iterations % 500 == 0
       puts "  Iteration #{gd.iterations}, parameters = #{gd.x}"
     end
   }
-  training_x = [Vector[1], Vector[2], Vector[3]]
-  training_y = [0, 1, 2]
-  lr = LinearRegression.new(training_x, training_y, 0)
-  lr.gradient_descent(0.03, monitor)
+  training_x = [Vector[-10], Vector[-5], Vector[-1], Vector[1], Vector[5], Vector[10]]
+  training_y = [0, 0, 0, 1, 1, 1]
+  lr = LogisticRegression.new(training_x, training_y, 0.5)
+  lr.gradient_descent(0.05, monitor)
   puts "! parameters = #{lr.parameters}"
 end
+
