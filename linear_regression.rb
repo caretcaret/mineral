@@ -2,7 +2,7 @@ require './gradient_descent'
 require 'matrix'
 
 class LinearRegression
-  attr_accessor :x_train, :y_train, :norm_weight, :parameters
+  attr_accessor :xs, :ys, :norm_weight, :parameters
 
   def initialize(xs, ys, norm_weight=0, parameters=nil)
     raise "No examples given" unless xs.size > 1 or ys.size > 1
