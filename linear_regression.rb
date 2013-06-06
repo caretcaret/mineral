@@ -3,68 +3,85 @@ require 'matrix'
 
 class LinearRegression
   attr_accessor :x_train, :y_train, :norm_weight, :parameters
-  def initialize(x_train, y_train, norm_weight, parameters)
-    @x_train = Array.new
-    x_train.each_with_index do |x_i, i|
+
+  def initialize(xs, ys, norm_weight=0, parameters=nil)
+    raise "No examples given" unless xs.size > 1 or ys.size > 1
+    raise "Length mismatch for xs, ys" unless xs.size == ys.size
+    @dimension = xs[0].size + 1
+
+    @xs = Array.new
+    xs.each_with_index do |x_i|
       # Add x[0] = 1 for all x_i
-      @x_train.push(Vector[*x_train[i].to_a.unshift(1)])
+      x_new = Vector[*x_i.to_a.unshift(1)]
+      raise "Dimension mismatch for xs" unless x_new.size == @dimension
+      @xs.push(x_new)
     end
-    @y_train = y_train
+    @ys = ys
     @norm_weight = norm_weight
-    @parameters = parameters
-  end
 
-  def evaluate features # assuming x[0] = 1
-    features.inner_product(@parameters)
-  end
-
-  def cost parameters
-    sum1 = 0
-    sum2 = 0
-    (0...@x_train.length).each do |i|
-      sum1 += ((evaluate @x_train[i]) - @y_train[i]) ** 2
-      if i != 0 # don't penalize bias parameter
-        sum2 += parameters[i] ** 2
-      end
+    if parameters.nil?
+      @parameters = Vector[*@dimension.times.map {-20 * Random.rand + 10}]
+    else
+      @parameters = parameters
     end
-    normalization = @norm_weight / (2 * parameters.size) * sum2
-    1 / (2 * @x_train.length) * sum1 + normalization
+    raise "Parameter dimension mismatch: parameters.size = #{@parameters.size}, dimension = #{@dimension}" unless @parameters.size == @dimension
   end
 
-  def cost_gradient parameters
+  def hypothesis(parameters, x) # assuming x[0] = 1
+    x.inner_product(parameters)
+  end
+
+  def predict(features)
+    hypothesis(@parameters, features)
+  end
+
+  def cost(parameters)
+    error = 0
+    (0...@xs.size).each do |i|
+      error += (hypothesis(parameters, @xs[i]) - @ys[i])**2
+    end
+    norm_penalty = 0
+    (1...@dimension).each do |j|
+      norm_penalty += parameters[j]**2
+    end
+    1 / (2 * @xs.size) * (error + @norm_weight * norm_penalty)
+  end
+
+  def cost_gradient(parameters)
     arr = []
-    (0...@parameters.size).each do |j|
+    (0...@dimension).each do |j|
       sum = 0
       if j != 0
-        sum = @norm_weight / parameters.size * @parameters[j]
+        sum = @norm_weight * parameters[j]
       end
-      (0...@x_train.length).each do |i|
-        sum += (evaluate(@x_train[i]) - @y_train[i]) * @x_train[i][j]
+      (0...@xs.length).each do |i|
+        sum += (hypothesis(parameters, @xs[i]) - @ys[i]) * @xs[i][j]
       end
-      arr.push(sum / parameters.size)
+      arr.push(sum / @xs.size)
     end
     Vector[*arr]
   end
 
-  def fit!(rate, halt, &monitor)
-    gd = GradientDescent.new(method(:cost_gradient), @parameters, rate, halt)
-    gd.run! do
-      @parameters = gd.x
-      monitor.call(gd)
-    end
+  def gradient_descent(rate, monitor=nil, halt=nil)
+    gd = GradientDescent.new(@parameters, rate, &method(:cost_gradient))
+    gd.each_iter(&monitor).stop_when(&halt).run
+    @parameters = gd.x
+    self
   end
 end
 
-
 if __FILE__ == $0
-  # Simple test
-  training_x = [Vector[1], Vector[2], Vector[3]]
-  training_y = [0, 1, 2.1]
-  lr = LinearRegression.new(training_x, training_y, 0.01, Vector[1, 2])
-  lr.fit!(0.03, lambda {|gd| (gd.x - gd.step(gd.x)).magnitude < 0.00000001}) do |gd|
+  puts "* Testing linear regression..."
+  puts "1 Testing simple data set [(1, 0), (2, 1), (3, 2)]"
+  puts "1 with rate=0.03, normalization weight=0"
+  monitor = lambda { |gd|
     if gd.iterations % 500 == 0
-      puts "  Iteration %d: %s" % [gd.iterations, gd.x.to_s]
+      puts "  Iteration #{gd.iterations}, parameters = #{gd.x}"
     end
-  end
-  puts "#{lr.parameters}"
+  }
+  training_x = [Vector[1], Vector[2], Vector[3]]
+  training_y = [0, 1, 2]
+  lr = LinearRegression.new(training_x, training_y, 0)
+  lr.gradient_descent(0.03, monitor)
+  puts "! parameters = #{lr.parameters}"
 end
