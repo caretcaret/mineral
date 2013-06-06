@@ -7,6 +7,11 @@ class GradientDescent
   @@default_on_iteration = proc { |gd| }
   @@default_halt = proc { |gd| (gd.x - gd.step(gd.x)).magnitude < 0.0000001 }
 
+  # Creates a gradient descent engine.
+  # Params:
+  # +x_init+:: The initial input value.
+  # +rate+:: The rate alpha to descend the gradient.
+  # +&gradient+:: A block representing the gradient function.
   def initialize(x_init, rate, &gradient)
     @gradient = gradient
     @x = x_init
@@ -17,15 +22,23 @@ class GradientDescent
     self
   end
 
-  def step val
+  # Returns the value at the next step of gradient descent.
+  # Params:
+  # +val+:: The input value.
+  def step(val)
     val - @rate * @gradient.call(val)
   end
 
+  # Updates the value +self.x+ after a step of gradient descent.
   def step!
     @x = step(@x)
     self
   end
 
+  # Sets a block taking in a +GradientDescent+ engine
+  # to run on each iteration of gradient descent.
+  # Params:
+  # +&on_iteration+:: The block. If set to nil, runs nothing.
   def each_iter(&on_iteration)
     if !on_iteration.nil? || block_given?
       @on_iteration = on_iteration
@@ -35,6 +48,11 @@ class GradientDescent
     self
   end
 
+  # Sets a block taking in a +GradientDescent+ engine that returns
+  # true if it should halt, and false otherwise.
+  # Params:
+  # +&halt+:: The block. If set to nil, halts when the magnitude of
+  # the change in each iteration is less than 1e-7.
   def stop_when(&halt)
     if !halt.nil? || block_given?
       @halt = halt
@@ -44,6 +62,7 @@ class GradientDescent
     self
   end
 
+  # Runs gradient descent and sets +self.x+ to the minimizing value.
   def run
     while !@halt.call(self)
       @on_iteration.call(self)
