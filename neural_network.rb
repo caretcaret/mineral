@@ -203,7 +203,7 @@ if __FILE__ == $0
   xs = ((-5...5).map do |i|
     (-5...5).map do |j|
       (-5...5).map do |k|
-        Vector[i, j, k, i**2, j**2, k**2]
+        Vector[i, j, k, i*j, j*k, k*i, i**2, j**2, k**2]
       end
     end
   end).flatten
@@ -219,7 +219,7 @@ if __FILE__ == $0
       print " #{gd.iterations}"
     end
   }
-  ann.train(0.1, monitor)
+  ann.train(1, monitor)
   puts "\n! Weights: #{ann.weights}"
   puts "  Testing accuracy..."
   a = b = c = d = 0

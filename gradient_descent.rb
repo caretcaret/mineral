@@ -3,9 +3,11 @@
 
 class GradientDescent
   attr_accessor :gradient, :x, :rate
-  attr_reader :iterations
+  attr_reader :iterations, :prev_x
   @@default_on_iteration = proc { |gd| }
-  @@default_halt = proc { |gd| (gd.x - gd.step(gd.x)).magnitude < 0.0000001 }
+  @@default_halt = proc { |gd|
+    (gd.x - gd.prev_x).magnitude < 0.0000001 && gd.iterations > 1
+  }
 
   # Creates a gradient descent engine.
   # Params:
@@ -15,6 +17,7 @@ class GradientDescent
   def initialize(x_init, rate, &gradient)
     @gradient = gradient
     @x = x_init
+    @prev_x = x_init
     @rate = rate
     @on_iteration = @@default_on_iteration
     @halt = @@default_halt
@@ -36,6 +39,7 @@ class GradientDescent
 
   # Updates the value +self.x+ after a step of gradient descent.
   def step!
+    @prev_x = @x
     @x = step(@x)
     self
   end
