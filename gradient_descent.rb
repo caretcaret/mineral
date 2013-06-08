@@ -26,7 +26,12 @@ class GradientDescent
   # Params:
   # +val+:: The input value.
   def step(val)
-    val - @rate * @gradient.call(val)
+    if val.kind_of? Array
+      grad = @gradient.call(val)
+      val.each_with_index.map { |x, i| x - @rate * grad[i] }
+    else
+      val - @rate * @gradient.call(val)
+    end
   end
 
   # Updates the value +self.x+ after a step of gradient descent.
