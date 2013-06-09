@@ -176,6 +176,44 @@ class NeuralNetwork
     gradient
   end
 
+  # Returns the cost function evaluated at the given weights. Used for
+  # gradient checking.
+  # Params:
+  # +weights+:: The weights for the network.
+  def cost(weights)
+    error = 0
+    normalization = 0
+    (0...@xs.size).each do |i|
+      result = evaluate(weights, @xs[i])
+      (0...@output_dim).each do |k|
+        error += @ys[i][k] * Math.log(result[k]) + (1 - @ys[i][k]) * Math.log(1 - result[k])
+      end
+    end
+    weights.each do |layer_matrix|
+      (0...layer_matrix.row_size).each do |i|
+        (1...layer_matrix.column_size).each do |j|
+          normalization += layer_matrix[i][j]**2
+        end
+      end
+    end
+    (-error + @norm_weight / 2 * normalization) / @xs.size
+  end
+
+  # Slow cost gradient approximation. Used for gradient checking.
+  # Params:
+  # +weights+:: The weights for the network.
+  # +epsilon+:: The level of approximation. Defaults to 1e-4.
+  def slow_cost_gradient(weights, epsilon=0.0001)
+    gradient = []
+    (0...weights.size).each do |layer|
+      gradient[layer] = Matrix.build(weights.row_size, weights.column_size) do |row, col|
+        weight = weights[layer][row][col]
+        (cost(weight + epsilon) - cost(weight - epsilon)) / (2 * epsilon)
+      end
+    end
+    gradient
+  end
+
   # Trains the neural network using back-propagation.
   # Params:
   # +rate+:: The learning rate alpha used in gradient descent.
