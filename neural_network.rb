@@ -246,13 +246,15 @@ end
 if __FILE__ == $0
   puts "* Testing neural network..."
   puts "1 Training examples: points (x, y, z) with -5 <= x, y, z < 5"
+  puts "1 and x^2, y^2, z^2 terms"
   puts "1 Training outputs: if the point is at least 4 from the origin,"
   puts "1 and if the point is at least 4 from the origin when projected on z = 0"
-  puts "1 Architecture: 1 hidden layer with 3 neurons"
+  puts "1 Architecture: no hidden layers"
+  puts "1 Ideal weights: Matrix[[-16, 0, 0, 0, 1, 1, 1], [-16, 0, 0, 0, 1, 1, 0]]"
   xs = ((-5...5).map do |i|
     (-5...5).map do |j|
       (-5...5).map do |k|
-        Vector[i, j, k, i*j, j*k, k*i, i**2, j**2, k**2]
+        Vector[i, j, k, i**2, j**2, k**2]
       end
     end
   end).flatten
@@ -260,7 +262,7 @@ if __FILE__ == $0
     Vector[Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2) > 4 ? 1 : 0,
            Math.sqrt(v[0]**2 + v[1]**2) > 4 ? 1 : 0]
   end
-  ann = NeuralNetwork.new([3, 3, 3], xs, ys, 0.001)
+  ann = NeuralNetwork.new([], xs, ys, 0.00)
   $stdout.sync = true
   print "  Training... iteration"
   monitor = lambda { |gd|
@@ -285,10 +287,10 @@ if __FILE__ == $0
       d += 1
     end
   end
-  puts "! Both correct: #{a}" # => 890
-  puts "! Second output incorrect: #{b}" # => 69
-  puts "! First output incorrect:#{c}" # => 20
-  puts "! Both incorrect: #{d}" # => 21
+  puts "! Both correct: #{a}" # => 904
+  puts "! Second output incorrect: #{b}" # => 72
+  puts "! First output incorrect:#{c}" # => 23
+  puts "! Both incorrect: #{d}" # => 1
 
   # gradient checking
   # ann.norm_weight = 1
