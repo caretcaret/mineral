@@ -170,7 +170,8 @@ class NeuralNetwork
       rows = big_delta[l].row_size
       cols = big_delta[l].column_size
       gradient[l] = Matrix.build(rows, cols) do |row, col|
-        (big_delta[l][row, col] + @norm_weight * weights[l][row, col]) / @xs.size
+        norm_factor = col == 0 ? 0 : @norm_weight
+        big_delta[l][row, col] / @xs.size + norm_factor * weights[l][row, col]
       end
     end
     gradient
@@ -191,12 +192,12 @@ class NeuralNetwork
     end
     weights.each do |layer_matrix|
       (0...layer_matrix.row_size).each do |i|
-        (0...layer_matrix.column_size).each do |j|
+        (1...layer_matrix.column_size).each do |j|
           normalization += layer_matrix[i,j]**2
         end
       end
     end
-    (-error + (@norm_weight / 2.0) * normalization) / @xs.size
+    -error / @xs.size + (@norm_weight / 2.0) * normalization
   end
 
   # Slow cost gradient approximation using definition of derivative. Used for gradient checking.
@@ -245,7 +246,7 @@ end
 
 if __FILE__ == $0
   puts "* Testing neural network..."
-  puts "1 Training examples: points (x, y, z) with -5 <= x, y, z < 5"
+  puts "1 Training examples: points (x, y, z) with -4.5 <= x, y, z <= 4.5"
   puts "1 and x^2, y^2, z^2 terms"
   puts "1 Training outputs: if the point is at least 4 from the origin,"
   puts "1 and if the point is at least 4 from the origin when projected on z = 0"
@@ -254,7 +255,7 @@ if __FILE__ == $0
   xs = ((-5...5).map do |i|
     (-5...5).map do |j|
       (-5...5).map do |k|
-        Vector[i, j, k, i**2, j**2, k**2]
+        Vector[i + 0.5, j + 0.5, k + 0.5, (i+0.5)**2, (j+0.5)**2, (k+0.5)**2]
       end
     end
   end).flatten
@@ -262,7 +263,7 @@ if __FILE__ == $0
     Vector[Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2) > 4 ? 1 : 0,
            Math.sqrt(v[0]**2 + v[1]**2) > 4 ? 1 : 0]
   end
-  ann = NeuralNetwork.new([], xs, ys, 0.00)
+  ann = NeuralNetwork.new([], xs, ys, 0.0)
   $stdout.sync = true
   print "  Training... iteration"
   monitor = lambda { |gd|
@@ -289,7 +290,7 @@ if __FILE__ == $0
   end
   puts "! Both correct: #{a}" # => 904
   puts "! Second output incorrect: #{b}" # => 72
-  puts "! First output incorrect:#{c}" # => 23
+  puts "! First output incorrect: #{c}" # => 23
   puts "! Both incorrect: #{d}" # => 1
 
   # gradient checking
