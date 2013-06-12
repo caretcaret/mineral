@@ -14,7 +14,7 @@ class LogisticRegression
   # +norm_weight+:: Normalization weight lambda.
   # +parameters+:: Initial coefficients vector theta with dimension equal to
   # the training features vectors (with the +1 bias feature). If set to nil, the values
-  # will be initialized to a random vector with elements between -10 and 10.
+  # will be initialized to a random vector with elements between -1 and 1.
   def initialize(xs, ys, norm_weight, parameters=nil)
     raise "No examples given" unless xs.size > 1 || ys.size > 1
     raise "Length mismatch for xs, ys" unless xs.size == ys.size
@@ -31,7 +31,7 @@ class LogisticRegression
     @norm_weight = norm_weight
 
     if parameters.nil?
-      @parameters = Vector[*@dimension.times.map {-20 * Random.rand + 10}]
+      @parameters = Vector[*@dimension.times.map {2 * Random.rand - 1}]
     else
       @parameters = parameters
     end
@@ -52,7 +52,7 @@ class LogisticRegression
   # Params:
   # +features+:: Feature vector, where the bias feature x[0] = 1 has NOT been added.
   def predict(features)
-    hypothesis(@parameters, features)
+    hypothesis(@parameters, Vector[*features.to_a.unshift(1)])
   end
 
   # Returns the normalized cost J(theta) evaluated at theta.
