@@ -21,7 +21,7 @@ class SoftmaxRegression
     end
     @ys = ys
     # assuming ys is a list of classes 0..n-1
-    @num_classes = ys.max
+    @num_classes = ys.max + 1
     @norm_weight = norm_weight
 
     if parameters.nil?
@@ -52,11 +52,17 @@ class SoftmaxRegression
   end
 
   def cost(parameters)
-    sum = 0
+    error = 0
+    normalization = 0
     @xs.each_with_index do |x, i|
-      sum += Math.log(hypothesis(parameters, x)[ys[i]])
+      errror += Math.log(hypothesis(parameters, x)[ys[i]])
     end
-    -1.0 / @xs.size * sum
+    parameters.each_with_index do |elem, row, col|
+      if col != 0
+        normalization += elem ** 2
+      end
+    end
+    -1.0 / @xs.size * error + @norm_weight / 2.0 * normalization
   end
 
   def cost_gradient(parameters)
@@ -74,7 +80,14 @@ class SoftmaxRegression
         end
       end
     end
-    gradient / @xs.size
+    normalization = Matrix.build(@num_classes, @dimension) do |klass, feature|
+      if feature == 0
+        0
+      else
+        @norm_weight * parameters[klass, feature]
+      end
+    end
+    gradient / @xs.size + normalization
   end
 
   def gradient_descent(rate, monitor=nil, halt=nil)
@@ -94,9 +107,7 @@ if __FILE__ == $0
       puts "  Iteration #{gd.iterations}, parameters = #{gd.x}"
     end
   }
-  halt = lambda { |gd|
-    gd.iterations > 10000
-  }
+  halt = lambda { |gd| gd.iterations > 10000 }
   training_x = (0...100).map {|i| Vector[i - 50] }
   training_y = training_x.map do |x|
     if x[0] < -25
@@ -108,6 +119,6 @@ if __FILE__ == $0
     end
   end
   sr = SoftmaxRegression.new(training_x, training_y, 0.5)
-  sr.gradient_descent(0.0005, monitor, halt)
+  sr.gradient_descent(0.05, monitor, halt)
   puts "! parameters = #{sr.parameters}"
 end
