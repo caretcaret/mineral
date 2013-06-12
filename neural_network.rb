@@ -1,3 +1,6 @@
+#!/usr/bin/ruby
+# coding: utf-8
+
 require './gradient_descent'
 require 'matrix'
 
@@ -288,10 +291,10 @@ if __FILE__ == $0
       d += 1
     end
   end
-  puts "! Both correct: #{a}" # => 904
-  puts "! Second output incorrect: #{b}" # => 72
-  puts "! First output incorrect: #{c}" # => 23
-  puts "! Both incorrect: #{d}" # => 1
+  puts "! Both correct: #{a}"
+  puts "! Second output incorrect: #{b}"
+  puts "! First output incorrect: #{c}"
+  puts "! Both incorrect: #{d}"
 
   # gradient checking
   # ann.norm_weight = 1
