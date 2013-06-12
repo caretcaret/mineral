@@ -49,14 +49,30 @@ class SoftmaxRegression
   # +parameters+:: The coefficient matrix theta.
   # +x+:: The feature vector (including +1 bias) to evaluate the hypothesis on.
   def hypothesis(parameters, x)
-    sum = 0
-    hypothesis_arr = []
-    parameters.row_vectors.each do |parameter|
-      component = Math.exp(parameter.inner_product(x))
-      sum += component
-      hypothesis_arr.push(component)
+    log_hypothesis(parameters, x).map do |log_component|
+      Math.exp(log_component)
     end
-    1.0 / sum * Vector[*hypothesis_arr]
+  end
+
+  # Returns the logarithm of the hypothesis h_theta(x). Used to prevent
+  # overflow errors. The parameters are the same as in +hypothesis(parameters, x)+.
+  def log_hypothesis(parameters, x)
+    log_components = parameters.row_vectors.map do |parameter|
+      parameter.inner_product(x)
+    end
+    # Normalize the largest value to 0, then add this factor back in
+    # after taking the exponential and the log.
+    m = log_components.max
+    sum = 0
+    log_components.each do |log_component|
+      sum += Math.exp(log_component - m)
+    end
+    log_sum = m + Math.log(sum)
+    # components / sum becomes log_components - sum
+    log_probabilities = log_components.map do |log_component|
+      log_component - log_sum
+    end
+    Vector[*log_probabilities]
   end
 
   # Returns the probability distribution given the features, where
@@ -76,7 +92,7 @@ class SoftmaxRegression
     error = 0
     normalization = 0
     @xs.each_with_index do |x, i|
-      errror += Math.log(hypothesis(parameters, x)[ys[i]])
+      error += log_hypothesis(parameters, x)[ys[i]]
     end
     parameters.each_with_index do |elem, row, col|
       if col != 0
@@ -135,7 +151,7 @@ end
 if __FILE__ == $0
   puts "* Training softmax regression..."
   puts "1 Testing simple classes: x < -25, -25 <= x <= 25, 25 < x"
-  puts "1 with rate=0.05, normalization weight=0.5"
+  puts "1 with rate=0.05, normalization weight=0.0"
   monitor = lambda { |gd|
     if gd.iterations % 500 == 0
       puts "  Iteration #{gd.iterations}, parameters = #{gd.x}"
@@ -152,7 +168,7 @@ if __FILE__ == $0
       1
     end
   end
-  sr = SoftmaxRegression.new(training_x, training_y, 0.5)
+  sr = SoftmaxRegression.new(training_x, training_y, 0.0)
   sr.gradient_descent(0.05, monitor, halt)
   puts "! parameters = #{sr.parameters}"
 end
