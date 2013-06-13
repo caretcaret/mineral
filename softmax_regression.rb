@@ -151,7 +151,7 @@ end
 if __FILE__ == $0
   puts "* Training softmax regression..."
   puts "1 Testing simple classes: x < -25, -25 <= x <= 25, 25 < x"
-  puts "1 with rate=0.05, normalization weight=0.0"
+  puts "1 with rate=1, normalization weight=0.0"
   monitor = lambda { |gd|
     if gd.iterations % 500 == 0
       puts "  Iteration #{gd.iterations}, parameters = #{gd.x}"
@@ -169,6 +169,7 @@ if __FILE__ == $0
     end
   end
   sr = SoftmaxRegression.new(training_x, training_y, 0.0)
-  sr.gradient_descent(0.05, monitor, halt)
+  sr.gradient_descent(1, monitor, halt)
   puts "! parameters = #{sr.parameters}"
+  puts "! Prediction for 25.5: #{sr.predict(Vector[25.5])}"
 end
