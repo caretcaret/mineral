@@ -86,12 +86,13 @@ class Preprocessor
           # must all be 0. Just set it to 0
           0
         else
-          # otherwise divide by sd to scale the feature
-          x_i / sd_i
+          # otherwise divide by two standard deviations to scale the feature
+          # within -1 .. 1
+          x_i / (2 * sd_i)
         end
       end
     else
-      sd == 0 ? 0 : x / sd
+      sd == 0 ? 0 : x / (2 * sd)
     end
   end
 
@@ -101,9 +102,9 @@ class Preprocessor
   # +sd+:: The standard deviation (vector or numeric) to scale it by.
   def unpack_scale(x, sd)
     if x.kind_of? Vector
-      x.map2(sd) { |x_i, sd_i| x_i * sd_i }
+      x.map2(sd) { |x_i, sd_i| x_i * 2 * sd_i }
     else
-      x * sd
+      x * 2 * sd
     end
   end
 

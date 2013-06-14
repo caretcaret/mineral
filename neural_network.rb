@@ -17,7 +17,7 @@ class NeuralNetwork
   # +norm_weight+:: Normalization weight lambda.
   # +weights=:: The weights of each node to be assigned.
   # If +nil+, weights will be assigned randomly between -1 and 1.
-  def initialize(hidden, xs, ys, norm_weight=0, weights=nil, activation=:tanh)
+  def initialize(hidden, xs, ys, norm_weight=0, weights=nil, activation=:recommended)
     raise "No examples given" unless xs.size > 1 or ys.size > 1
     raise "Length mismatch for xs, ys" unless xs.size == ys.size
     @input_dim = xs[0].size
@@ -41,7 +41,7 @@ class NeuralNetwork
     # the weights between layer i and i+1, where layers are 0-indexed
     if weights.nil?
       @weights = (1...layers.size).map do |i|
-        Matrix.build(layers[i], layers[i-1] + 1) { 2 * rand - 1 }
+        Matrix.build(layers[i], layers[i-1] + 1) { 0.02 * rand - 0.01 }
       end
     end
 
@@ -229,55 +229,6 @@ class NeuralNetwork
     gradient
   end
 
-  # Returns the cost function evaluated at the given weights. Used for
-  # gradient checking.
-  # Params:
-  # +weights+:: The weights for the network.
-  def cost(weights)
-    error = 0
-    normalization = 0
-    (0...@xs.size).each do |i|
-      result = evaluate(weights, @xs[i])
-      (0...@output_dim).each do |k|
-        error += (result[k] - @ys[i][k])**2
-      end
-    end
-    weights.each do |layer_matrix|
-      (0...layer_matrix.row_size).each do |i|
-        (1...layer_matrix.column_size).each do |j|
-          normalization += layer_matrix[i,j]**2
-        end
-      end
-    end
-    -error / (2 * @xs.size) + (@norm_weight / 2.0) * normalization
-  end
-
-  # Slow cost gradient approximation using definition of derivative. Used for gradient checking.
-  # Params:
-  # +weights+:: The weights for the network.
-  # +epsilon+:: The level of approximation. Defaults to 1e-8.
-  def slow_cost_gradient(weights, epsilon=0.00000001)
-    gradient = []
-    (0...weights.size).each do |layer|
-      # save the matrix
-      weight_matrix = weights[layer]
-      weight_arr = weights[layer].to_a
-      # make mutable matrix by editing the corresponding array
-      weights[layer] = Matrix.rows(weight_arr, copy=false)
-      gradient[layer] = Matrix.build(weight_matrix.row_size, weight_matrix.column_size) do |row, col|
-        weight_arr[row][col] += epsilon
-        c1 = cost(weights)
-        weight_arr[row][col] -= 2 * epsilon
-        c2 = cost(weights)
-        weight_arr[row][col] += epsilon
-        (c1 - c2) / (2.0 * epsilon)
-      end
-      # restore the matrix
-      weights[layer] = weight_matrix
-    end
-    gradient
-  end
-
   # Trains the neural network using back-propagation.
   # Params:
   # +rate+:: The learning rate alpha used in gradient descent.
@@ -312,8 +263,8 @@ if __FILE__ == $0
     end
   end).flatten
   ys = xs.map do |v|
-    Vector[Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2) > 4 ? 1 : -1,
-           Math.sqrt(v[0]**2 + v[1]**2) > 4 ? 1 : -1]
+    Vector[Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2) > 4 ? 1.7159047085 : -1.7159047085,
+           Math.sqrt(v[0]**2 + v[1]**2) > 4 ? 1.7159047085 : -1.7159047085]
   end
   ann = NeuralNetwork.new([], xs, ys, 0.0)
   $stdout.sync = true
@@ -337,12 +288,8 @@ if __FILE__ == $0
       a += 1
     elsif match0 && !match1
       b += 1
-      p result
-      p ys[i]
     elsif !match0 && match1
       c += 1
-      p result
-      p ys[i]
     else
       d += 1
     end
@@ -351,19 +298,4 @@ if __FILE__ == $0
   puts "! Second output incorrect: #{b}"
   puts "! First output incorrect: #{c}"
   puts "! Both incorrect: #{d}"
-
-  # gradient checking
-  # ann.norm_weight = 1
-  # a = ann.cost_gradient(ann.weights)
-  # b = ann.slow_cost_gradient(ann.weights)
-  # p a
-  # p b
-  # (0...a.size).each do |i|
-  #   (0...a[i].row_size).each do |j|
-  #     (0...a[i].column_size).each do |k|
-  #       puts (a[i][j, k] - b[i][j, k]) / b[i][j, k]
-  #     end
-  #   end
-  # end
-
 end

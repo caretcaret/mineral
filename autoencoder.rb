@@ -62,7 +62,7 @@ end
 if __FILE__ == $0
   puts "* Testing autoencoder..."
   xs = (0..10).map do |x|
-    Vector[x / 20.0 + 0.25, 0.75 - x / 20.0]
+    Vector[-x / 10.0 + 0.5, x / 10.0 - 0.5]
   end
   puts "1 Input:"
   puts "1 #{xs}"
