@@ -28,7 +28,7 @@ class Autoencoder < NeuralNetwork
     # The layer to train, going deeper into the encoder
     deeper = layer
     # The other layer to train, going up from the encoder
-    shallower = 2 * @layers.size - 1 - layer
+    shallower = 2 * @layers.size - 1 - deeper
     deeper_matrix = @weights[deeper]
     shallower_matrix = @weights[shallower]
     features = encoded_xs(deeper)
@@ -39,21 +39,48 @@ class Autoencoder < NeuralNetwork
   end
 
   def pretrain(rate, monitor=nil, halt=nil)
-    @layers.each_index do |i|
+    (@trained...@layers.size).each do |i|
       pretrain_layer(i, rate, monitor, halt)
+      @trained += 1
     end
   end
 
-  def encode(x, depth)
+  def encode(x, depth=@layers.size)
     if depth == 0
       x
     else
       forward!(x)
-      remove_bias_element(@activations[depth])
+      remove_bias_elem(@activations[depth])
     end
   end
 
-  def encoded_xs(depth)
+  def encoded_xs(depth=@layers.size)
     @xs.map { |x| encode(x, depth) }
   end
+end
+
+if __FILE__ == $0
+  puts "* Testing autoencoder..."
+  xs = (0..10).map do |x|
+    Vector[x / 20.0 + 0.25, 0.75 - x / 20.0]
+  end
+  puts "1 Input:"
+  puts "1 #{xs}"
+  sae = Autoencoder.new([1], xs, 0)
+  monitor = lambda { |gd|
+    if gd.iterations % 20 == 0
+      print " #{gd.iterations}"
+    end
+  }
+  puts "  Pretraining..."
+  sae.pretrain(1, monitor)
+  puts "\n  Training..."
+  sae.train(1, monitor)
+
+  puts "\n! Weights:"
+  puts "  #{sae.weights}"
+  puts "! Reconstructed input:"
+  puts "  #{xs.map { |x| sae.evaluate!(x) }}"
+  puts "! Encoding:"
+  puts "  #{sae.encoded_xs}"
 end
