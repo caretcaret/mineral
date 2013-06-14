@@ -17,7 +17,7 @@ class NeuralNetwork
   # +norm_weight+:: Normalization weight lambda.
   # +weights=:: The weights of each node to be assigned.
   # If +nil+, weights will be assigned randomly between -1 and 1.
-  def initialize(hidden, xs, ys, norm_weight=0, weights=nil)
+  def initialize(hidden, xs, ys, norm_weight=0, weights=nil, activation=:tanh)
     raise "No examples given" unless xs.size > 1 or ys.size > 1
     raise "Length mismatch for xs, ys" unless xs.size == ys.size
     @input_dim = xs[0].size
@@ -47,6 +47,18 @@ class NeuralNetwork
 
     @activations = []
     @deltas = []
+
+    case activation
+    when :logistic
+      @actfunc = method(:logistic)
+      @actfunc_prime = method(:logistic_prime)
+    when :tanh
+      @actfunc = method(:tanh)
+      @actfunc_prime = method(:tanh_prime)
+    else
+      @actfunc = method(:recommended_sigmoid)
+      @actfunc_prime = method(:recommended_sigmoid_prime)
+    end
   end
 
   def logistic(x)
@@ -54,16 +66,53 @@ class NeuralNetwork
     when Numeric
       1.0 / (1.0 + Math.exp(-x))
     when Vector
-      x.map { |x_i| logistic(x_i) }
+      x.map(&method(:logistic))
     end
   end
 
-  def logistic_prime(x)
+  def logistic_prime(activation)
+    case activation
+    when Numeric
+      activation * (1 - activation)
+    when Vector
+      activation.map(&method(:logistic_prime))
+    end
+  end
+
+  def tanh(x)
     case x
     when Numeric
-      logistic(x) * (1 - logistic(x))
+      Math.tanh(x)
     when Vector
-      x.map { |x_i| logistic_prime(x_i) }
+      x.map(&method(:tanh))
+    end
+  end
+
+  def tanh_prime(activation)
+    case activation
+    when Numeric
+      1.0 - activation**2
+    when Vector
+      activation.map(&method(:tanh_prime))
+    end
+  end
+
+  # From http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf section 4.4
+  def recommended_sigmoid(x)
+    case x
+    when Numeric
+      1.7159047085 * Math.tanh(2.0 / 3.0 * x)
+    when Vector
+      x.map(&method(:recommended_sigmoid))
+    end
+  end
+
+  def recommended_sigmoid_prime(activation)
+    case activation
+    when Numeric
+      1.1439364723 * (1.0 - activation**2)
+    when Vector
+      activation.map(&method(:recommended_sigmoid_prime))
     end
   end
 
@@ -94,7 +143,7 @@ class NeuralNetwork
     activations[0] = add_bias_elem(input)
     (0...weights.size).each do |layer|
       preactivation = weights[layer] * activations[layer]
-      activation = logistic(preactivation)
+      activation = @actfunc.call(preactivation)
       activations[layer + 1] = add_bias_elem(activation)
     end
     # the activations are indexed by layer (0-indexed)
@@ -138,7 +187,7 @@ class NeuralNetwork
     (weights.size - 1).downto(1).each do |layer|
       # layer = the layer that we want to calculate deltas for
       reverse_error = weights[layer].transpose * delta[layer + 1]
-      reverse_gradient = activations[layer].map { |a| a * (1 - a) }
+      reverse_gradient = activations[layer].map(&@actfunc_prime)
       delta[layer] = elementwise_product(reverse_error, reverse_gradient)
       delta[layer] = remove_bias_elem(delta[layer])
     end
@@ -190,7 +239,7 @@ class NeuralNetwork
     (0...@xs.size).each do |i|
       result = evaluate(weights, @xs[i])
       (0...@output_dim).each do |k|
-        error += @ys[i][k] * Math.log(result[k]) + (1 - @ys[i][k]) * Math.log(1 - result[k])
+        error += (result[k] - @ys[i][k])**2
       end
     end
     weights.each do |layer_matrix|
@@ -200,7 +249,7 @@ class NeuralNetwork
         end
       end
     end
-    -error / @xs.size + (@norm_weight / 2.0) * normalization
+    -error / (2 * @xs.size) + (@norm_weight / 2.0) * normalization
   end
 
   # Slow cost gradient approximation using definition of derivative. Used for gradient checking.
@@ -263,8 +312,8 @@ if __FILE__ == $0
     end
   end).flatten
   ys = xs.map do |v|
-    Vector[Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2) > 4 ? 1 : 0,
-           Math.sqrt(v[0]**2 + v[1]**2) > 4 ? 1 : 0]
+    Vector[Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2) > 4 ? 1 : -1,
+           Math.sqrt(v[0]**2 + v[1]**2) > 4 ? 1 : -1]
   end
   ann = NeuralNetwork.new([], xs, ys, 0.0)
   $stdout.sync = true
@@ -275,18 +324,25 @@ if __FILE__ == $0
     end
   }
 
-  ann.train(1, monitor)
+  ann.train(0.5, monitor)
   puts "\n! Weights: #{ann.weights}"
   puts "  Testing accuracy..."
   a = b = c = d = 0
+  match = lambda { |a, b| a > 0 && b > 0 || a < 0 && b < 0 }
   (0...xs.size).each do |i|
     result = ann.evaluate!(xs[i])
-    if ys[i][0] == result[0].round && ys[i][1] == result[1].round
+    match0 = match.call(ys[i][0], result[0])
+    match1 = match.call(ys[i][1], result[1])
+    if match0 && match1
       a += 1
-    elsif ys[i][0] == result[0].round && ys[i][1] != result[1].round
+    elsif match0 && !match1
       b += 1
-    elsif ys[i][0] != result[0].round && ys[i][1] == result[1].round
+      p result
+      p ys[i]
+    elsif !match0 && match1
       c += 1
+      p result
+      p ys[i]
     else
       d += 1
     end
