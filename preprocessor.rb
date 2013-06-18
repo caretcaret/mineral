@@ -13,7 +13,7 @@ class Preprocessor
   # +ys+:: The output values or vectors for the ML problem. If not specified,
   # defaults to the empty list, which does nothing.
   def initialize(xs, ys=[])
-    raise "No examples given" unless xs.size > 1
+    raise "No examples given" unless xs.size > 0
     raise "Length mismatch for xs, ys" unless ys.empty? || xs.size == ys.size
     @dimension = xs[0].size
     @xs = xs

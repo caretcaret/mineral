@@ -16,7 +16,7 @@ class LinearRegression
   # the training features vectors (with the +1 bias feature). If set to nil, the values
   # will be initialized to a random vector with elements between -10 and 10.
   def initialize(xs, ys, norm_weight=0, parameters=nil)
-    raise "No examples given" unless xs.size > 1 or ys.size > 1
+    raise "No examples given" unless xs.size > 0 || ys.size > 0
     raise "Length mismatch for xs, ys" unless xs.size == ys.size
     @dimension = xs[0].size + 1
 

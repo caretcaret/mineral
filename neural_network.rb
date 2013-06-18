@@ -18,7 +18,7 @@ class NeuralNetwork
   # +weights=:: The weights of each node to be assigned.
   # If +nil+, weights will be assigned randomly between -1 and 1.
   def initialize(hidden, xs, ys, norm_weight=0, weights=nil, activation=:recommended)
-    raise "No examples given" unless xs.size > 1 or ys.size > 1
+    raise "No examples given" unless xs.size > 0 || ys.size > 0
     raise "Length mismatch for xs, ys" unless xs.size == ys.size
     @input_dim = xs[0].size
     @output_dim = ys[0].size
